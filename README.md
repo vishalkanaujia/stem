@@ -1,2 +1,2 @@
 # go-repos
-Dev practice of Go
+Dev practice
