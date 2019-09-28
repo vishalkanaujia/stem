@@ -71,7 +71,7 @@ bool search(const char *pattern, const char *input )
         if (MatchAnywhere(pattern, input))
             return true;
         ++input;
-        }
+    }
     return false;    
 }
 
