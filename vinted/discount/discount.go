@@ -1,10 +1,31 @@
 package discount
 
 import (
+	"math/rand"
 	"practice/vinted/shipping/courier"
 	"practice/vinted/size"
+	"strconv"
 	"time"
 )
+
+const (
+	countOfYears         = 10
+	countOfMonthsInYears = 12 * countOfYears
+)
+
+type calendar map[string]float64
+
+type discount struct {
+	budget   float64
+	calendar calendar
+}
+
+func NewDiscount(budget float64) *discount {
+	return &discount{
+		budget:   budget,
+		calendar: make(map[string]float64, countOfMonthsInYears),
+	}
+}
 
 type request interface {
 	GetSize() size.Size
@@ -39,11 +60,34 @@ func (s ShipmentResponse) GetDiscountPrice() float64 {
 	return s.discountPrice
 }
 
-func Apply(request request) (response *ShipmentResponse) {
+func (d *discount) Apply(request request) (response *ShipmentResponse) {
+	var plannedDiscount float64
+
+	key := d.CreateKey(request.GetTime())
+
+	monthlySpent, ok := d.calendar[key]
+	if !ok {
+		d.calendar[key] = 0
+	}
+
+	if monthlySpent < d.budget {
+		rand.Seed(time.Now().UnixNano())
+
+		plannedDiscount = d.budget * rand.Float64()
+		if monthlySpent-plannedDiscount >= 0 {
+			monthlySpent += plannedDiscount
+			d.calendar[key] = monthlySpent
+		}
+	}
+
 	return &ShipmentResponse{
 		shippingTime:  time.Now(),
 		shippingSize:  request.GetSize(),
 		courier:       request.GetCourier(),
-		discountPrice: 0,
+		discountPrice: plannedDiscount,
 	}
+}
+
+func (d *discount) CreateKey(date time.Time) string {
+	return strconv.Itoa(date.Year()) + "-" + date.Month().String()
 }
