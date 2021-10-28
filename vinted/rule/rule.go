@@ -28,9 +28,9 @@ func NewRuleEngine(couriers map[string]*courier.Courier) *ruleEngine {
 }
 
 type request interface {
-	GetSize() size.Size
+	GetShippingSize() size.Size
 	GetCourier() *courier.Courier
-	GetTime() time.Time
+	GetShippingTime() time.Time
 }
 
 type ShipmentResponse struct {
@@ -60,19 +60,18 @@ func (s ShipmentResponse) GetCourier() *courier.Courier {
 	return s.courier
 }
 
-func Process(ruleEngineRequest request) *ShipmentResponse {
-	return &ShipmentResponse{
-		shippingTime: ruleEngineRequest.GetTime(),
-		shippingSize: ruleEngineRequest.GetSize(),
-		courier:      ruleEngineRequest.GetCourier(),
-	}
+func (r *ruleEngine) Process(ruleEngineRequest request) *ShipmentResponse {
+	processedRequest := r.LowestPriceBySize(ruleEngineRequest)
+	processedRequest = r.LowestPriceBySize(processedRequest)
+
+	return processedRequest
 }
 
 // Add rules as needed by business
 func (r *ruleEngine) LowestPriceBySize(request request) *ShipmentResponse {
 	var bestProvider *courier.Courier = request.GetCourier()
 
-	if request.GetSize() == size.Small {
+	if request.GetShippingSize() == size.Small {
 		var lowestPrice float64 = maxPrice
 
 		for _, provider := range r.couriers {
@@ -85,15 +84,15 @@ func (r *ruleEngine) LowestPriceBySize(request request) *ShipmentResponse {
 	}
 
 	return &ShipmentResponse{
-		shippingTime: request.GetTime(),
-		shippingSize: request.GetSize(),
+		shippingTime: request.GetShippingTime(),
+		shippingSize: request.GetShippingSize(),
 		courier:      bestProvider,
 	}
 }
 
 func (r *ruleEngine) FreeShipmentByProvider(request request) *ShipmentResponse {
 	if request.GetCourier().GetName() == "LP" {
-		key := r.CreateKey(request.GetTime())
+		key := r.CreateKey(request.GetShippingTime())
 
 		_, ok := r.calendar[key]
 		if !ok {
@@ -104,8 +103,8 @@ func (r *ruleEngine) FreeShipmentByProvider(request request) *ShipmentResponse {
 
 		if r.calendar[key]%3 == 0 {
 			return &ShipmentResponse{
-				shippingTime: request.GetTime(),
-				shippingSize: request.GetSize(),
+				shippingTime: request.GetShippingTime(),
+				shippingSize: request.GetShippingSize(),
 				courier:      request.GetCourier(),
 				price:        0,
 			}
@@ -113,8 +112,8 @@ func (r *ruleEngine) FreeShipmentByProvider(request request) *ShipmentResponse {
 	}
 
 	return &ShipmentResponse{
-		shippingTime: request.GetTime(),
-		shippingSize: request.GetSize(),
+		shippingTime: request.GetShippingTime(),
+		shippingSize: request.GetShippingSize(),
 		courier:      request.GetCourier(),
 	}
 }

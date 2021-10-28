@@ -20,7 +20,7 @@ type discount struct {
 	calendar calendar
 }
 
-func NewDiscount(budget float64) *discount {
+func NewDiscountEngine(budget float64) *discount {
 	return &discount{
 		budget:   budget,
 		calendar: make(map[string]float64, countOfMonthsInYears),
@@ -28,9 +28,9 @@ func NewDiscount(budget float64) *discount {
 }
 
 type request interface {
-	GetSize() size.Size
+	GetShippingSize() size.Size
 	GetCourier() *courier.Courier
-	GetTime() time.Time
+	GetShippingTime() time.Time
 }
 
 type ShipmentResponse struct {
@@ -63,7 +63,7 @@ func (s ShipmentResponse) GetDiscountPrice() float64 {
 func (d *discount) Apply(request request) (response *ShipmentResponse) {
 	var plannedDiscount float64
 
-	key := d.CreateKey(request.GetTime())
+	key := d.CreateKey(request.GetShippingTime())
 
 	monthlySpent, ok := d.calendar[key]
 	if !ok {
@@ -81,8 +81,8 @@ func (d *discount) Apply(request request) (response *ShipmentResponse) {
 	}
 
 	return &ShipmentResponse{
-		shippingTime:  time.Now(),
-		shippingSize:  request.GetSize(),
+		shippingTime:  request.GetShippingTime(),
+		shippingSize:  request.GetShippingSize(),
 		courier:       request.GetCourier(),
 		discountPrice: plannedDiscount,
 	}
