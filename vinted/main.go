@@ -73,13 +73,7 @@ func (s *shipping) processInput() {
 		}
 
 		// parse the shipment info
-		shipmentTime, err := time.Parse("2006-01-02", transaction[0])
-		if err != nil {
-			fmt.Printf("Invalid time format %v\n", err)
-			transaction = append(transaction, "IGNORED")
-			fmt.Println(strings.Join(transaction, " "))
-			continue
-		}
+		shipmentTime, _ := time.Parse("2006-01-02", transaction[0])
 
 		shipmentSize := size.Size(transaction[1])
 
@@ -96,10 +90,11 @@ func (s *shipping) processInput() {
 
 		// Print the result
 		discountPrice := discountedShipment.GetDiscountPrice()
+		fmt.Printf("%v %s %s %0.2f ", discountedShipment.GetShippingTime().Format("2006-01-02"), discountedShipment.GetShippingSize(), discountedShipment.GetCourier().GetName(), discountedShipment.GetPrice())
 		if discountPrice == 0 {
-			fmt.Printf("%v %s %s %f %v\n", discountedShipment.GetShippingTime().Format("2006-01-02"), discountedShipment.GetShippingSize(), discountedShipment.GetCourier().GetName(), discountedShipment.GetPrice(), "-")
+			fmt.Printf("%v\n", "-")
 		} else {
-			fmt.Printf("%v %s %s %f %f\n", discountedShipment.GetShippingTime().Format("2006-01-02"), discountedShipment.GetShippingSize(), discountedShipment.GetCourier().GetName(), discountedShipment.GetPrice(), discountedShipment.GetDiscountPrice())
+			fmt.Printf("%0.2f\n", discountedShipment.GetDiscountPrice())
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -110,6 +105,12 @@ func (s *shipping) processInput() {
 
 func (s *shipping) validate(transaction []string) bool {
 	if len(transaction) != 3 {
+		return false
+	}
+
+	_, err := time.Parse("2006-01-02", transaction[0])
+	if err != nil {
+		fmt.Printf("Invalid time format %v\n", err)
 		return false
 	}
 
