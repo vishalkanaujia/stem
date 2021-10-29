@@ -1,12 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"log"
+	"os"
 	"practice/vinted/discount"
 	"practice/vinted/rule"
 	"practice/vinted/shipping/courier"
 	"practice/vinted/shipping/shipment"
 	"practice/vinted/size"
+	"strings"
 	"time"
 )
 
@@ -21,23 +25,12 @@ func main() {
 	s.addCourier("MR", map[size.Size]float64{size.Small: 2, size.Medium: 3, size.Large: 4})
 
 	// Initialize shipping rule engine
-	ruleEngine := rule.NewRuleEngine(s.couriers)
+	s.ruleEngine = rule.NewRuleEngine(s.couriers)
 
 	// Initialize discount rule engine
-	discountEngine := discount.NewDiscountEngine(budget)
+	s.discountEngine = discount.NewDiscountEngine(budget)
 
-	// parse the shipment info
-	shipmentTime, shipmentSize, courierName := parseShipmentInfo()
-
-	provider := s.couriers[courierName]
-	shipmentRequest := shipment.NewShipment(shipmentTime, shipmentSize, provider)
-
-	// Rule check the shipment
-	outShipment := ruleEngine.Process(shipmentRequest)
-
-	// Calculate the discount price
-	discountedShipment := discountEngine.Apply(outShipment)
-	fmt.Printf("discountedShipment: %v %v %v\n", discountedShipment.GetCourier().GetName(), discountedShipment.GetCourier().GetPrice(shipmentSize), discountedShipment.GetDiscountPrice())
+	s.processInput()
 }
 
 type Country string
@@ -45,6 +38,9 @@ type Country string
 type shipping struct {
 	country  Country
 	couriers map[string]*courier.Courier
+
+	ruleEngine     *rule.RuleEngine
+	discountEngine *discount.Discount
 }
 
 func NewShipping(countryName string) *shipping {
@@ -61,4 +57,77 @@ func (s *shipping) addCourier(courierName string, pricing map[size.Size]float64)
 
 func parseShipmentInfo() (time.Time, size.Size, string) {
 	return time.Now(), size.Small, "MR"
+}
+
+func (s *shipping) processInput() {
+	file, err := os.Open("./input.txt")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		transaction := strings.Split(line, " ")
+		if !s.validate(transaction) {
+			transaction = append(transaction, "IGNORED")
+			fmt.Println(strings.Join(transaction, " "))
+			continue
+		}
+
+		// parse the shipment info
+		shipmentTime, err := time.Parse("2006-01-02", transaction[0])
+		if err != nil {
+			fmt.Printf("Invalid time format %v\n", err)
+			transaction = append(transaction, "IGNORED")
+			fmt.Println(strings.Join(transaction, " "))
+			continue
+		}
+
+		shipmentSize := size.Size(transaction[1])
+
+		courierName := string(transaction[2])
+
+		provider := s.couriers[courierName]
+		shipmentRequest := shipment.NewShipment(shipmentTime, shipmentSize, provider)
+
+		// Rule check the shipment
+		outShipment := s.ruleEngine.Process(shipmentRequest)
+
+		// Calculate the discount price
+		discountedShipment := s.discountEngine.Apply(outShipment)
+
+		// Print the result
+		discountPrice := discountedShipment.GetDiscountPrice()
+		if discountPrice == 0 {
+			fmt.Printf("%v %s %s %f %v\n", discountedShipment.GetShippingTime().Format("2006-01-02"), discountedShipment.GetShippingSize(), discountedShipment.GetCourier().GetName(), discountedShipment.GetPrice(), "-")
+
+		} else {
+			fmt.Printf("%v %s %s %f %f\n", discountedShipment.GetShippingTime().Format("2006-01-02"), discountedShipment.GetShippingSize(), discountedShipment.GetCourier().GetName(), discountedShipment.GetPrice(), discountedShipment.GetDiscountPrice())
+		}
+		if err := scanner.Err(); err != nil {
+			log.Fatal(err)
+		}
+	}
+}
+
+func (s *shipping) validate(transaction []string) bool {
+	if len(transaction) != 3 {
+		return false
+	}
+
+	sz := transaction[1]
+	provider := string(transaction[2])
+
+	_, ok := s.couriers[provider]
+	if !ok {
+		return false
+	}
+
+	if size.Size(sz) == size.Unknown {
+		return false
+	}
+
+	return true
 }

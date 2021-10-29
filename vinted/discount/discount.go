@@ -1,8 +1,6 @@
 package discount
 
 import (
-	"fmt"
-	"math/rand"
 	"practice/vinted/shipping/courier"
 	"practice/vinted/size"
 	"strconv"
@@ -16,13 +14,13 @@ const (
 
 type calendar map[string]float64
 
-type discount struct {
+type Discount struct {
 	budget   float64
 	calendar calendar
 }
 
-func NewDiscountEngine(budget float64) *discount {
-	return &discount{
+func NewDiscountEngine(budget float64) *Discount {
+	return &Discount{
 		budget:   budget,
 		calendar: make(map[string]float64, countOfMonthsInYears),
 	}
@@ -32,13 +30,20 @@ type request interface {
 	GetShippingSize() size.Size
 	GetCourier() *courier.Courier
 	GetShippingTime() time.Time
+	GetPrice() float64
 }
 
 type ShipmentResponse struct {
 	shippingTime  time.Time
 	shippingSize  size.Size
 	courier       *courier.Courier
+	price         float64
 	discountPrice float64
+}
+
+// GetPrice returns the float64 price
+func (s ShipmentResponse) GetPrice() float64 {
+	return s.price
 }
 
 // GetShippingTime returns the time.Time shippingTime
@@ -61,12 +66,12 @@ func (s ShipmentResponse) GetDiscountPrice() float64 {
 	return s.discountPrice
 }
 
-func (d *discount) Apply(request request) (response *ShipmentResponse) {
+func (d *Discount) Apply(request request) (response *ShipmentResponse) {
 	var plannedDiscount float64
 
 	key := d.CreateKey(request.GetShippingTime())
-	fmt.Printf("key: %v\n", key)
-	fmt.Printf("d.budget: %v\n", d.budget)
+	// fmt.Printf("key: %v\n", key)
+	// fmt.Printf("d.budget: %v\n", d.budget)
 
 	monthlySpent, ok := d.calendar[key]
 	if !ok {
@@ -74,25 +79,26 @@ func (d *discount) Apply(request request) (response *ShipmentResponse) {
 	}
 
 	if monthlySpent < d.budget {
-		rand.Seed(time.Now().UnixNano())
+		fullPrice := request.GetCourier().GetPrice(request.GetShippingSize())
+		plannedDiscount = fullPrice - request.GetPrice()
 
-		plannedDiscount = request.GetCourier().GetPrice(request.GetShippingSize()) * rand.Float64()
 		if monthlySpent-plannedDiscount >= 0 {
 			monthlySpent += plannedDiscount
 			d.calendar[key] = monthlySpent
 		}
 	}
 
-	fmt.Printf("d.calendar: %v\n", d.calendar)
+	//fmt.Printf("d.calendar: %v\n", d.calendar)
 
 	return &ShipmentResponse{
 		shippingTime:  request.GetShippingTime(),
 		shippingSize:  request.GetShippingSize(),
 		courier:       request.GetCourier(),
+		price:         request.GetPrice(),
 		discountPrice: plannedDiscount,
 	}
 }
 
-func (d *discount) CreateKey(date time.Time) string {
+func (d *Discount) CreateKey(date time.Time) string {
 	return strconv.Itoa(date.Year()) + "-" + date.Month().String()
 }

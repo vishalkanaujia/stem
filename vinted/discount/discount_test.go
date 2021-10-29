@@ -28,12 +28,14 @@ func TestDiscount_Apply(t *testing.T) {
 				{
 					shippingTime: time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC),
 					shippingSize: size.Small,
-					courier:      testCouriers["LP"],
+					courier:      testCouriers["MR"],
+					price:        1.50,
 				},
 				{
 					shippingTime: time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC),
 					shippingSize: size.Large,
 					courier:      testCouriers["MR"],
+					price:        4,
 				},
 			},
 			expectedResponse: []*ShipmentResponse{
@@ -47,7 +49,7 @@ func TestDiscount_Apply(t *testing.T) {
 					shippingTime:  time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC),
 					shippingSize:  size.Large,
 					courier:       testCouriers["MR"],
-					discountPrice: 0.50,
+					discountPrice: 0,
 				},
 			},
 		},
@@ -59,6 +61,7 @@ func TestDiscount_Apply(t *testing.T) {
 					shippingTime: time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC),
 					shippingSize: size.Small,
 					courier:      testCouriers["LP"],
+					price:        0,
 				},
 			},
 			expectedResponse: []*ShipmentResponse{
@@ -89,6 +92,12 @@ type testRequest struct {
 	shippingTime time.Time
 	shippingSize size.Size
 	courier      *courier.Courier
+	price        float64
+}
+
+// GetPrice returns the float64 price
+func (t testRequest) GetPrice() float64 {
+	return t.price
 }
 
 // GetShippingTime returns the time.Time shippingTime

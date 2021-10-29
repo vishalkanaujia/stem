@@ -49,7 +49,7 @@ func TestRule_Process(t *testing.T) {
 				{
 					shippingTime: time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC),
 					shippingSize: size.Small,
-					courier:      testCouriers["LP"],
+					courier:      testCouriers["MR"],
 					price:        1.50,
 				},
 				{
