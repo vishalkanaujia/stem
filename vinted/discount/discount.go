@@ -70,8 +70,6 @@ func (d *Discount) Apply(request request) (response *ShipmentResponse) {
 	var plannedDiscount float64
 
 	key := d.CreateKey(request.GetShippingTime())
-	// fmt.Printf("key: %v\n", key)
-	// fmt.Printf("d.budget: %v\n", d.budget)
 
 	monthlySpent, ok := d.calendar[key]
 	if !ok {
@@ -87,8 +85,6 @@ func (d *Discount) Apply(request request) (response *ShipmentResponse) {
 			d.calendar[key] = monthlySpent
 		}
 	}
-
-	//fmt.Printf("d.calendar: %v\n", d.calendar)
 
 	return &ShipmentResponse{
 		shippingTime:  request.GetShippingTime(),

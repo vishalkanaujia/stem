@@ -69,7 +69,6 @@ func (r *RuleEngine) Process(ruleEngineRequest request) *ShipmentResponse {
 	}
 
 	shipmentResponse = r.LowestPriceBySize(shipmentResponse)
-	// fmt.Printf("after lowest:: processedRequest: %v\n", shipmentResponse)
 
 	shipmentResponse = r.FreeShipmentByProvider(shipmentResponse)
 
@@ -79,13 +78,10 @@ func (r *RuleEngine) Process(ruleEngineRequest request) *ShipmentResponse {
 // Add rules as needed by business
 func (r *RuleEngine) LowestPriceBySize(request *ShipmentResponse) *ShipmentResponse {
 	var lowestPrice float64 = request.GetCourier().GetPrice(request.GetShippingSize())
-	// fmt.Printf("xxx lowestPrice: %v\n", lowestPrice)
 
 	if request.GetShippingSize() == size.Small {
 		for _, provider := range r.couriers {
-			//			fmt.Printf("provider: %v\n", provider)
 			price := provider.GetPrice(size.Small)
-			//		fmt.Printf("price: %v lowestPrice=%v\n", price, lowestPrice)
 			if price < lowestPrice {
 				lowestPrice = price
 			}
@@ -101,7 +97,6 @@ func (r *RuleEngine) LowestPriceBySize(request *ShipmentResponse) *ShipmentRespo
 }
 
 func (r *RuleEngine) FreeShipmentByProvider(request *ShipmentResponse) *ShipmentResponse {
-	// fmt.Printf("zzz r.calendar: %v\n", r.calendar)
 	if request.GetCourier().GetName() == "LP" && request.GetShippingSize() == size.Large {
 		key := r.CreateKey(request.GetShippingTime())
 
@@ -111,8 +106,6 @@ func (r *RuleEngine) FreeShipmentByProvider(request *ShipmentResponse) *Shipment
 		} else {
 			r.calendar[key]++
 		}
-
-		//	fmt.Printf("zzz r.calendar: %v\n", r.calendar)
 
 		if r.calendar[key]%3 == 0 {
 			return &ShipmentResponse{

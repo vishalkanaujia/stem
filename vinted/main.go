@@ -55,10 +55,6 @@ func (s *shipping) addCourier(courierName string, pricing map[size.Size]float64)
 	s.couriers[courierName] = c
 }
 
-func parseShipmentInfo() (time.Time, size.Size, string) {
-	return time.Now(), size.Small, "MR"
-}
-
 func (s *shipping) processInput() {
 	file, err := os.Open("./input.txt")
 	if err != nil {
@@ -102,10 +98,10 @@ func (s *shipping) processInput() {
 		discountPrice := discountedShipment.GetDiscountPrice()
 		if discountPrice == 0 {
 			fmt.Printf("%v %s %s %f %v\n", discountedShipment.GetShippingTime().Format("2006-01-02"), discountedShipment.GetShippingSize(), discountedShipment.GetCourier().GetName(), discountedShipment.GetPrice(), "-")
-
 		} else {
 			fmt.Printf("%v %s %s %f %f\n", discountedShipment.GetShippingTime().Format("2006-01-02"), discountedShipment.GetShippingSize(), discountedShipment.GetCourier().GetName(), discountedShipment.GetPrice(), discountedShipment.GetDiscountPrice())
 		}
+
 		if err := scanner.Err(); err != nil {
 			log.Fatal(err)
 		}
