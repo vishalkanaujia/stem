@@ -6,7 +6,7 @@ const (
 	Small   Size = "S"
 	Medium  Size = "M"
 	Large   Size = "L"
-	Unknown Size = "L"
+	Unknown Size = "Unknown"
 )
 
 func (s Size) Size(inSize string) Size {
