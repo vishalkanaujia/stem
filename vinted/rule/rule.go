@@ -1,6 +1,7 @@
 package rule
 
 import (
+	"fmt"
 	"practice/vinted/shipping/courier"
 	"practice/vinted/size"
 	"strconv"
@@ -61,19 +62,29 @@ func (s ShipmentResponse) GetCourier() *courier.Courier {
 }
 
 func (r *ruleEngine) Process(ruleEngineRequest request) *ShipmentResponse {
-	processedRequest := r.LowestPriceBySize(ruleEngineRequest)
-	processedRequest = r.LowestPriceBySize(processedRequest)
+	var shipmentResponse *ShipmentResponse
+	shipmentResponse = &ShipmentResponse{
+		shippingTime: ruleEngineRequest.GetShippingTime(),
+		shippingSize: ruleEngineRequest.GetShippingSize(),
+		courier:      ruleEngineRequest.GetCourier(),
+		price:        ruleEngineRequest.GetCourier().GetPrice(ruleEngineRequest.GetShippingSize()),
+	}
 
-	return processedRequest
+	shipmentResponse = r.LowestPriceBySize(shipmentResponse)
+	fmt.Printf("after lowest:: processedRequest: %v\n", shipmentResponse)
+
+	shipmentResponse = r.FreeShipmentByProvider(shipmentResponse)
+
+	return shipmentResponse
 }
 
 // Add rules as needed by business
-func (r *ruleEngine) LowestPriceBySize(request request) *ShipmentResponse {
+func (r *ruleEngine) LowestPriceBySize(request *ShipmentResponse) *ShipmentResponse {
 	var bestProvider *courier.Courier = request.GetCourier()
+	var lowestPrice float64 = request.GetCourier().GetPrice(request.GetShippingSize())
+	fmt.Printf("xxx lowestPrice: %v\n", lowestPrice)
 
 	if request.GetShippingSize() == size.Small {
-		var lowestPrice float64 = maxPrice
-
 		for _, provider := range r.couriers {
 			price := provider.GetPrice(size.Small)
 			if price < lowestPrice {
@@ -87,11 +98,13 @@ func (r *ruleEngine) LowestPriceBySize(request request) *ShipmentResponse {
 		shippingTime: request.GetShippingTime(),
 		shippingSize: request.GetShippingSize(),
 		courier:      bestProvider,
+		price:        lowestPrice,
 	}
 }
 
-func (r *ruleEngine) FreeShipmentByProvider(request request) *ShipmentResponse {
-	if request.GetCourier().GetName() == "LP" {
+func (r *ruleEngine) FreeShipmentByProvider(request *ShipmentResponse) *ShipmentResponse {
+	fmt.Printf("zzz r.calendar: %v\n", r.calendar)
+	if request.GetCourier().GetName() == "LP" && request.GetShippingSize() == size.Large {
 		key := r.CreateKey(request.GetShippingTime())
 
 		_, ok := r.calendar[key]
@@ -100,6 +113,8 @@ func (r *ruleEngine) FreeShipmentByProvider(request request) *ShipmentResponse {
 		} else {
 			r.calendar[key]++
 		}
+
+		fmt.Printf("zzz r.calendar: %v\n", r.calendar)
 
 		if r.calendar[key]%3 == 0 {
 			return &ShipmentResponse{
@@ -115,6 +130,7 @@ func (r *ruleEngine) FreeShipmentByProvider(request request) *ShipmentResponse {
 		shippingTime: request.GetShippingTime(),
 		shippingSize: request.GetShippingSize(),
 		courier:      request.GetCourier(),
+		price:        request.GetCourier().GetPrice(request.GetShippingSize()),
 	}
 }
 
