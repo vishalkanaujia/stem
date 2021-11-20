@@ -104,10 +104,15 @@ func (r *RuleEngine) FreeShipmentByProvider(request *ShipmentResponse) *Shipment
 		if !ok {
 			r.calendar[key] = 1
 		} else {
-			r.calendar[key]++
+			if r.calendar[key] != 0 {
+				r.calendar[key]++
+			}
 		}
 
-		if r.calendar[key]%3 == 0 {
+		// fmt.Printf("r.calendar[key]: %v key=%v\n", r.calendar[key], key)
+		if r.calendar[key] != 0 && r.calendar[key]%3 == 0 {
+			r.calendar[key] = 0
+
 			return &ShipmentResponse{
 				shippingTime: request.GetShippingTime(),
 				shippingSize: request.GetShippingSize(),

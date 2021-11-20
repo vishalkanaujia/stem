@@ -12,7 +12,7 @@ const (
 	countOfMonthsInYears = 12 * countOfYears
 )
 
-type calendar map[string]float64
+type calendar map[string]int
 
 type Discount struct {
 	budget   float64
@@ -22,7 +22,7 @@ type Discount struct {
 func NewDiscountEngine(budget float64) *Discount {
 	return &Discount{
 		budget:   budget,
-		calendar: make(map[string]float64, countOfMonthsInYears),
+		calendar: make(map[string]int, countOfMonthsInYears),
 	}
 }
 
@@ -41,7 +41,7 @@ type ShipmentResponse struct {
 	discountPrice float64
 }
 
-// GetPrice returns the float64 price
+// GetPrice returns the int price
 func (s ShipmentResponse) GetPrice() float64 {
 	return s.price
 }
@@ -67,22 +67,49 @@ func (s ShipmentResponse) GetDiscountPrice() float64 {
 }
 
 func (d *Discount) Apply(request request) (response *ShipmentResponse) {
-	var plannedDiscount float64
+	var plannedDiscount int
 
 	key := d.CreateKey(request.GetShippingTime())
 
+	// fmt.Printf("key: %v\n", key)
 	monthlySpent, ok := d.calendar[key]
 	if !ok {
-		d.calendar[key] = 0
+		d.calendar[key] = int(d.budget * 100)
 	}
 
-	if monthlySpent < d.budget {
-		fullPrice := request.GetCourier().GetPrice(request.GetShippingSize())
-		plannedDiscount = fullPrice - request.GetPrice()
+	// fmt.Printf("monthlySpent: %v\n", monthlySpent)
+	if monthlySpent > 0 {
+		var fullPrice int = int(float64(100) * request.GetCourier().GetPrice(request.GetShippingSize()))
+
+		// fmt.Printf("request.GetPrice(): %v\n", request.GetPrice())
+		plannedDiscount = fullPrice - int(float64(100)*request.GetPrice())
 
 		if monthlySpent-plannedDiscount >= 0 {
-			monthlySpent += plannedDiscount
+			monthlySpent -= plannedDiscount
 			d.calendar[key] = monthlySpent
+
+			return &ShipmentResponse{
+				shippingTime:  request.GetShippingTime(),
+				shippingSize:  request.GetShippingSize(),
+				courier:       request.GetCourier(),
+				price:         request.GetPrice(),
+				discountPrice: float64(plannedDiscount) / float64(100),
+			}
+		}
+
+		// partial discount
+		if monthlySpent-plannedDiscount < 0 {
+			d.calendar[key] -= monthlySpent
+
+			discountPrice := float64(monthlySpent) / float64(100)
+
+			return &ShipmentResponse{
+				shippingTime:  request.GetShippingTime(),
+				shippingSize:  request.GetShippingSize(),
+				courier:       request.GetCourier(),
+				price:         request.GetCourier().GetPrice(request.GetShippingSize()) - discountPrice,
+				discountPrice: discountPrice,
+			}
 		}
 	}
 
@@ -90,8 +117,8 @@ func (d *Discount) Apply(request request) (response *ShipmentResponse) {
 		shippingTime:  request.GetShippingTime(),
 		shippingSize:  request.GetShippingSize(),
 		courier:       request.GetCourier(),
-		price:         request.GetPrice(),
-		discountPrice: plannedDiscount,
+		price:         request.GetCourier().GetPrice(request.GetShippingSize()),
+		discountPrice: 0,
 	}
 }
 
